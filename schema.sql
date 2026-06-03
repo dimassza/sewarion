@@ -117,28 +117,40 @@ create policy "Users can update their orders" on public.orders
   );
 
 
--- 4. Buat Tabel MESSAGES (menyimpan obrolan chat real-time)
+-- 4. Buat Tabel MESSAGES (menyimpan obrolan chat real-time & mediasi)
 create table if not exists public.messages (
   id uuid default gen_random_uuid() primary key,
   sender_email text not null,
   receiver_email text not null,
   content text not null,
+  order_id text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Aktifkan RLS di tabel messages
 alter table public.messages enable row level security;
 
-create policy "Users can view messages sent to or by them" on public.messages
+-- Policy select: pengirim, penerima, admin, atau penyewa/pemilik dari order_id terkait bisa membaca pesan
+create policy "Users can view messages sent to/by them or for their orders" on public.messages
   for select using (
     sender_email = (select email from public.profiles where id = auth.uid()) or
-    receiver_email = (select email from public.profiles where id = auth.uid())
+    receiver_email = (select email from public.profiles where id = auth.uid()) or
+    (select email from public.profiles where id = auth.uid()) = 'admin@sewarion.com' or
+    exists (
+      select 1 from public.orders o
+      join public.products p on o.product_id = p.id
+      where o.id = messages.order_id and (
+        o.renter_email = (select email from public.profiles where id = auth.uid()) or
+        p.owner_id = (select email from public.profiles where id = auth.uid())
+      )
+    )
   );
 
 create policy "Authenticated users can send messages" on public.messages
   for insert with check (
     sender_email = (select email from public.profiles where id = auth.uid())
   );
+
 
 
 -- 5. Buat Tabel NOTIFICATIONS (menyimpan notifikasi masuk)

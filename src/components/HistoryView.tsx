@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Receipt, Download, ArrowRight, MessageSquare, AlertTriangle, QrCode, Building, Check, ShieldAlert } from 'lucide-react';
+import { Calendar, Receipt, Download, ArrowRight, MessageSquare, AlertTriangle, QrCode, Building, Check, ShieldAlert, ShieldCheck } from 'lucide-react';
 import type { AppContextType, Order } from '../types';
 import ChatDrawer from './ChatDrawer';
 
@@ -11,13 +11,15 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
   const { orders, navigate, user } = appCtx;
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'paid' | 'completed'>('all');
 
+  // Check if current user is Sewarion Admin
+  const isAdmin = user.email === 'admin@sewarion.com';
+
   // Simulation state: allows testing overdue late returns
   const [simulateOverdue, setSimulateOverdue] = useState(false);
 
   // Chat drawer states
   const [chatOpen, setChatOpen] = useState(false);
-  const [chatTargetEmail, setChatTargetEmail] = useState('');
-  const [chatTargetName, setChatTargetName] = useState('');
+  const [selectedOrderForChat, setSelectedOrderForChat] = useState<Order | null>(null);
 
   // Late fee payment modal states
   const [selectedOrderForLateFee, setSelectedOrderForLateFee] = useState<Order | null>(null);
@@ -520,8 +522,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
   };
 
   const handleOpenChat = (order: Order) => {
-    setChatTargetEmail('admin@sewarion.com');
-    setChatTargetName('Admin Sewarion (Layanan & Pengiriman)');
+    setSelectedOrderForChat(order);
     setChatOpen(true);
   };
 
@@ -563,6 +564,156 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
     }, 1500);
   };
 
+  // ─── RENDER ADMIN VIEW (Pusat Mediasi Sewarion) ───
+  if (isAdmin) {
+    return (
+      <div className="w-full max-w-5xl mx-auto px-4 md:px-10 py-12 min-h-[70vh] font-sans">
+        
+        {/* Admin Header */}
+        <div className="mb-10 text-left">
+          <div className="flex items-center gap-2 text-[#006b2c] dark:text-[#7ffc97] mb-2 font-bold text-xs uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Dasbor Penengah Resmi</span>
+          </div>
+          <h1 className="font-sans font-black text-2xl lg:text-3xl text-[#171d16] dark:text-[#dde5d9] tracking-tight">
+            Pusat Mediasi Sewarion (Admin)
+          </h1>
+          <p className="font-sans text-xs text-[#6e7b6c] dark:text-[#9bb098] mt-1.5 leading-relaxed">
+            Sebagai penengah P2P rental, Anda memantau seluruh kontrak aktif, memverifikasi tanda terima denda, dan berkoordinasi langsung dengan Penyewa & Pemilik.
+          </p>
+        </div>
+
+        {/* Admin Tab Filters */}
+        <div className="border-b border-[#bdcaba]/40 dark:border-[#2b3a27]/40 flex gap-6 md:gap-10 overflow-x-auto pb-1 mb-8">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`pb-4 font-sans text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'all'
+                ? 'text-[#006b2c] dark:text-[#7ffc97] border-b-2 border-[#006b2c] dark:border-[#7ffc97]'
+                : 'text-[#6e7b6c] dark:text-[#9bb098] hover:text-[#006b2c] dark:hover:text-white'
+            }`}
+          >
+            Semua Kontrak Aset
+          </button>
+          <button
+            onClick={() => setActiveTab('paid')}
+            className={`pb-4 font-sans text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'paid'
+                ? 'text-[#006b2c] dark:text-[#7ffc97] border-b-2 border-[#006b2c] dark:border-[#7ffc97]'
+                : 'text-[#6e7b6c] dark:text-[#9bb098] hover:text-[#006b2c] dark:hover:text-white'
+            }`}
+          >
+            Sewa Berjalan (Lunas)
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`pb-4 font-sans text-xs font-bold uppercase tracking-wider focus:outline-none transition-colors whitespace-nowrap cursor-pointer ${
+              activeTab === 'completed'
+                ? 'text-[#006b2c] dark:text-[#7ffc97] border-b-2 border-[#006b2c] dark:border-[#7ffc97]'
+                : 'text-[#6e7b6c] dark:text-[#9bb098] hover:text-[#006b2c] dark:hover:text-white'
+            }`}
+          >
+            Selesai / Terarsip
+          </button>
+        </div>
+
+        {/* Admin Stack Grid */}
+        {filteredOrders.length > 0 ? (
+          <div className="space-y-6">
+            {filteredOrders.map((order) => {
+              const overdueInfo = getOrderOverdueInfo(order);
+
+              return (
+                <div
+                  key={order.id}
+                  className={`bg-white dark:bg-[#151f14] p-6 rounded-2xl border shadow-md flex flex-col md:flex-row justify-between gap-6 hover:shadow-lg transition-all duration-300 border-[#bdcaba]/35 dark:border-[#2b3a27]`}
+                >
+                  <div className="flex flex-col sm:flex-row gap-5 text-left">
+                    <div className="w-full sm:w-24 h-24 rounded-xl overflow-hidden bg-[#eff6ea] dark:bg-[#0f140e] flex-shrink-0 border border-[#bdcaba]/20 dark:border-[#2b3a27]/30">
+                      <img src={order.product.image} className="w-full h-full object-cover" alt={order.product.name} />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-[#171d16] dark:text-[#dde5d9] bg-[#f4fcf0] dark:bg-[#0f140e] px-2 py-0.5 rounded border border-[#bdcaba]/40 dark:border-[#2b3a27]">
+                          KONTRAK ID: {order.id}
+                        </span>
+                        {getStatusBadge(order)}
+                      </div>
+
+                      <h3 className="font-sans font-extrabold text-base text-[#171d16] dark:text-[#dde5d9] pt-1">
+                        {order.product.name}
+                      </h3>
+
+                      {/* Renter & Owner Contacts */}
+                      <div className="pt-2 text-[11px] text-[#3e4a3d] dark:text-[#b4c3b2] space-y-0.5">
+                        <p>👤 <strong>Penyewa</strong>: {order.userEmail || 'Budi Penyewa'}</p>
+                        <p>💼 <strong>Pemilik</strong>: {order.product.ownerId === 'system' ? 'Jakarta Lens Hub (Official)' : order.product.ownerId}</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-2 text-[10px] text-[#6e7b6c] dark:text-[#9bb098] font-semibold uppercase tracking-wider">
+                        <p className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-[#006b2c] dark:text-[#7ffc97]" />
+                          <span>{formatIndonesianDate(order.startDate)} - {formatIndonesianDate(order.endDate)} ({order.durationDays} hari)</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Column */}
+                  <div className="flex flex-row md:flex-col justify-between md:justify-center items-end border-t md:border-t-0 border-[#eff6ea] dark:border-[#2b3a27]/20 pt-4 md:pt-0 gap-4">
+                    <div className="text-left md:text-right">
+                      <p className="text-[10px] text-[#6e7b6c] dark:text-[#9bb098] font-semibold uppercase tracking-wider">Nilai Transaksi</p>
+                      <p className="font-sans font-black text-lg text-[#006b2c] dark:text-[#7ffc97] mt-0.5">
+                        Rp {order.totalPayment.toLocaleString('id-ID')}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <button
+                        onClick={() => handleOpenChat(order)}
+                        className="bg-[#006b2c] hover:bg-[#00873a] text-white px-4 py-2 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Masuk Mediasi</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDownloadContract(order)}
+                        className="p-2 rounded-full border border-[#bdcaba] dark:border-[#2b3a27] text-[#6e7b6c] dark:text-[#dde5d9] hover:text-[#006b2c] dark:hover:text-white hover:bg-[#f4fcf0] dark:hover:bg-[#1c2818]/60 transition-colors cursor-pointer"
+                        title="Tinjau Kontrak Hukum Digital"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-[#eff6ea]/55 dark:bg-[#141b12] rounded-3xl p-16 border border-[#bdcaba]/30 dark:border-[#2b3a27]/30 text-center max-w-lg mx-auto">
+            <p className="font-sans text-sm text-[#3e4a3d] dark:text-[#9bb098] font-semibold">Belum ada kontrak aktif di sistem.</p>
+          </div>
+        )}
+
+        {/* Real-time Message Chat Drawer Overlay for Admin */}
+        {selectedOrderForChat && (
+          <ChatDrawer
+            isOpen={chatOpen}
+            onClose={() => {
+              setChatOpen(false);
+              setSelectedOrderForChat(null);
+            }}
+            currentUserEmail={user.email}
+            order={selectedOrderForChat}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ─── RENDER STANDARD USER VIEW ───
   return (
     <div className="w-full max-w-5xl mx-auto px-4 md:px-10 py-12 min-h-[70vh] font-sans">
       
@@ -745,7 +896,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
                           className="bg-[#006b2c]/10 text-[#006b2c] dark:text-[#7ffc97] hover:bg-[#006b2c] dark:hover:bg-[#00873a] hover:text-white px-4 py-2.5 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Chat Sewarion</span>
+                          <span>Chat Mediasi</span>
                         </button>
                       </>
                     )}
@@ -764,6 +915,13 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
                           title="Cetak Kontrak Hukum Digital"
                         >
                           <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenChat(order)}
+                          className="bg-[#006b2c]/10 text-[#006b2c] dark:text-[#7ffc97] hover:bg-[#006b2c] dark:hover:bg-[#00873a] hover:text-white px-4 py-2.5 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Chat Mediasi</span>
                         </button>
                       </>
                     )}
@@ -787,13 +945,15 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
       )}
 
       {/* Real-time Message Chat Drawer Overlay */}
-      {user.isLoggedIn && chatTargetEmail && (
+      {user.isLoggedIn && selectedOrderForChat && (
         <ChatDrawer
           isOpen={chatOpen}
-          onClose={() => setChatOpen(false)}
+          onClose={() => {
+            setChatOpen(false);
+            setSelectedOrderForChat(null);
+          }}
           currentUserEmail={user.email}
-          otherUserEmail={chatTargetEmail}
-          otherUserName={chatTargetName}
+          order={selectedOrderForChat}
         />
       )}
 
@@ -873,7 +1033,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
                     {/* Mock QR Code */}
                     <div className="w-36 h-36 bg-white border border-[#bdcaba]/70 p-2 rounded-xl flex items-center justify-center mb-2 shadow-sm">
                       <svg width="120" height="120" viewBox="0 0 29 29" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M0 0h7v7H0V0zm2 2v3h3V2H2zm8-2h1v1h-1V0zm2 0h2v1h-1v1h-1V0zm3 0h4v1h-4V0zm5 0h1v2h-1V0zm2 0h1v1h-1V0zM8 2h1v2H8V2zm3 0h1v1h-1V2zm3 0h1v1h-1V2zm-3 2h3v1h-3V4zm5 0h1v1h-1V4zm2 0h1v2h-1V4zm2 0h1v1h-1V4zm-7 2h1v1h-1V6zm3 0h1v1h-1V6zm-9 2h7v7H0V8zm2 2v3h3v-3H2zm8-2h1v1h-1V8zm2 0h1v2h-1V8zm2 0h1v1h-1V8zm4 0h1v1h-1V8zm2 0h1v1h-1V8zm2 0h1v2h-1V8zm-9 2h1v1h-1v-1zm2 0h1v2h-1v-2zm3 0h1v1h-1v-1zm4 0h1v2h-1v-2zm2 0h1v1h-1v-1zm-9 2h2v1h-2v-1zm4 0h1v1h-1v-1zm4 0h1v1h-1v-1zm-6 2h1v1h-1v-1zm2 0h2v1h-2v-1zm3 0h3v1h-3v-1zm-10 2h1v1H8v-1zm3 0h3v1h-3v-1zm4 0h1v1h-1v-1zm5 0h2v1h-2v-1zm2 0h2v1h-2v-1zm-13 2h1v1H9v-1zm2 0h1v1h-1v-1zm3 0h1v1h-1v-1zm3 0h1v1h-1v-1zm2 0h1v1h-1v-1zm3 0h2v2h-1v-1h-1v-1zm-8 2h1v1H9v-1zm3 0h1v1h-1v-1zm2 0h3v1h-3v-1z" fill="#b91c1c"/>
+                        <path d="M0 0h7v7H0V0zm2 2v3h3V2H2zm8-2h1v1h-1V0zm2 0h2v1h-1v-1H8v-1zm1 0h1v1h-1V0zm3 0h4v1h-4V0zm5 0h1v2h-1V0zm2 0h1v1h-1V0zM8 2h1v2H8V2zm3 0h1v1h-1V2zm3 0h1v1h-1V2zm-3 2h3v1h-3V4zm5 0h1v1h-1V4zm2 0h1v2h-1V4zm2 0h1v1h-1V4zm-7 2h1v1h-1V6zm3 0h1v1h-1V6zm-9 2h7v7H0V8zm2 2v3h3v-3H2zm8-2h1v1h-1V8zm2 0h1v2h-1V8zm2 0h1v1h-1V8zm4 0h1v1h-1V8zm2 0h1v1h-1V8zm2 0h1v2h-1V8zm-9 2h1v1h-1v-1zm2 0h1v2h-1v-2zm3 0h1v1h-1v-1zm4 0h1v2h-1v-2zm2 0h1v1h-1v-1zm-9 2h2v1h-2v-1zm4 0h1v1h-1v-1zm4 0h1v1h-1v-1zm-6 2h1v1h-1v-1zm2 0h2v1h-2v-1zm3 0h3v1h-3v-1zm-10 2h1v1H8v-1zm3 0h3v1h-3v-1zm4 0h1v1h-1v-1zm5 0h2v1h-2v-1zm2 0h2v1h-2v-1zm-13 2h1v1H9v-1zm2 0h1v1h-1v-1zm3 0h1v1h-1v-1zm3 0h1v1h-1v-1zm2 0h1v1h-1v-1zm3 0h2v2h-1v-1h-1v-1zm-8 2h1v1H9v-1zm3 0h1v1h-1v-1zm2 0h3v1h-3v-1z" fill="#b91c1c"/>
                       </svg>
                     </div>
                     <p className="text-[10px] text-[#6e7b6c] dark:text-[#9bb098] font-bold">SCAN QRIS UNTUK MEMBAYAR DENDA</p>

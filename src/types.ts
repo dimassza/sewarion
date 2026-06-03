@@ -49,6 +49,7 @@ export interface Message {
   sender_email: string;
   receiver_email: string;
   content: string;
+  order_id?: string;
   created_at?: string;
 }
 
