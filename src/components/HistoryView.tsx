@@ -12,7 +12,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'paid' | 'completed'>('all');
 
   // Check if current user is Sewarion Admin
-  const isAdmin = user.email === 'admin@sewarion.com';
+  const isAdmin = user.email && user.email.toLowerCase().startsWith('admin@');
 
   // Simulation state: allows testing overdue late returns
   const [simulateOverdue, setSimulateOverdue] = useState(false);

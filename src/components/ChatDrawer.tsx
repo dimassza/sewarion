@@ -175,7 +175,7 @@ export default function ChatDrawer({
   };
 
   const getSenderRoleBadge = (senderEmail: string) => {
-    if (senderEmail === 'admin@sewarion.com') {
+    if (senderEmail && senderEmail.toLowerCase().startsWith('admin@')) {
       return (
         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[8px] font-bold uppercase tracking-wider mb-1">
           <ShieldCheck className="w-2.5 h-2.5" />
@@ -208,7 +208,7 @@ export default function ChatDrawer({
 
   const getSenderDisplayName = (senderEmail: string) => {
     if (senderEmail === currentUserEmail) return 'Anda';
-    if (senderEmail === 'admin@sewarion.com') return 'Sewarion Admin';
+    if (senderEmail && senderEmail.toLowerCase().startsWith('admin@')) return 'Sewarion Admin';
     return senderEmail.split('@')[0];
   };
 
@@ -279,7 +279,7 @@ export default function ChatDrawer({
           ) : (
             messages.map((msg, idx) => {
               const isMe = msg.sender_email === currentUserEmail;
-              const isMediator = msg.sender_email === 'admin@sewarion.com';
+              const isMediator = msg.sender_email && msg.sender_email.toLowerCase().startsWith('admin@');
               
               return (
                 <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}>
