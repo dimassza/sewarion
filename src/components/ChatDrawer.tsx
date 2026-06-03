@@ -7,8 +7,8 @@ interface ChatDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   currentUserEmail: string;
-  otherUserEmail?: string;
-  otherUserName?: string;
+  otherUserEmail: string;
+  otherUserName: string;
   order?: Order;
 }
 
@@ -16,8 +16,8 @@ export default function ChatDrawer({
   isOpen,
   onClose,
   currentUserEmail,
-  otherUserEmail = '',
-  otherUserName = '',
+  otherUserEmail,
+  otherUserName,
   order
 }: ChatDrawerProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -30,12 +30,19 @@ export default function ChatDrawer({
   };
 
   const isMediation = !!order;
+  const isAdmin = currentUserEmail.toLowerCase().startsWith('admin') && currentUserEmail.toLowerCase().endsWith('@sewarion.com');
+  
+  // In mediation, we want to isolate messages involving the standard user (non-admin)
+  const targetUser = isMediation
+    ? (isAdmin ? otherUserEmail : currentUserEmail)
+    : otherUserEmail;
+
   const chatTitle = isMediation
-    ? `Mediasi: ${order.product.name}`
+    ? `Chat Sewarion: ${order.product.name}`
     : otherUserName || 'Layanan Sewarion';
   
   const chatSubtitle = isMediation
-    ? `Kontrak ID: ${order.id}`
+    ? `Kontrak ID: ${order.id} (${isAdmin ? 'Mediasi ' + otherUserName : 'Layanan Penengah'})`
     : otherUserEmail || 'admin@sewarion.com';
 
   // 1. Fetch message history
@@ -49,8 +56,9 @@ export default function ChatDrawer({
           let query = supabase.from('messages').select('*');
           
           if (isMediation) {
-            // Fetch messages for this specific order
-            query = query.eq('order_id', order.id);
+            // Fetch messages for this specific order involving the target user
+            query = query.eq('order_id', order.id)
+                         .or(`sender_email.eq.${targetUser},receiver_email.eq.${targetUser}`);
           } else {
             // Fetch 1-to-1 support chat history
             query = query.or(`and(sender_email.eq.${currentUserEmail},receiver_email.eq.${otherUserEmail}),and(sender_email.eq.${otherUserEmail},receiver_email.eq.${currentUserEmail})`);
@@ -67,7 +75,7 @@ export default function ChatDrawer({
       } else {
         // LocalStorage fallback
         const localKey = isMediation
-          ? `sewarion_chat_order_${order.id}`
+          ? `sewarion_chat_order_${order.id}_${targetUser}`
           : `sewarion_chat_${[currentUserEmail, otherUserEmail].sort().join('_')}`;
         
         const raw = localStorage.getItem(localKey);
@@ -79,7 +87,7 @@ export default function ChatDrawer({
 
     const timer = setTimeout(fetchMessages, 50);
     return () => clearTimeout(timer);
-  }, [isOpen, currentUserEmail, otherUserEmail, isMediation, order?.id]);
+  }, [isOpen, currentUserEmail, otherUserEmail, isMediation, order?.id, targetUser]);
 
   // 2. Realtime listener for message inserts
   useEffect(() => {
@@ -95,7 +103,8 @@ export default function ChatDrawer({
           
           let isRelated = false;
           if (isMediation) {
-            isRelated = newMsg.order_id === order.id;
+            isRelated = newMsg.order_id === order.id && 
+                        (newMsg.sender_email === targetUser || newMsg.receiver_email === targetUser);
           } else {
             isRelated =
               (newMsg.sender_email === currentUserEmail && newMsg.receiver_email === otherUserEmail) ||
@@ -117,7 +126,7 @@ export default function ChatDrawer({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen, currentUserEmail, otherUserEmail, isMediation, order?.id]);
+  }, [isOpen, currentUserEmail, otherUserEmail, isMediation, order?.id, targetUser]);
 
   // Auto-scroll when messages change
   useEffect(() => {
@@ -133,7 +142,7 @@ export default function ChatDrawer({
 
     const newMsg: Message = {
       sender_email: currentUserEmail,
-      receiver_email: isMediation ? 'mediator' : otherUserEmail,
+      receiver_email: otherUserEmail,
       content: text,
       order_id: isMediation ? order.id : undefined,
       created_at: new Date().toISOString()
@@ -143,7 +152,7 @@ export default function ChatDrawer({
       try {
         const insertPayload: any = {
           sender_email: currentUserEmail,
-          receiver_email: isMediation ? 'mediator' : otherUserEmail,
+          receiver_email: otherUserEmail,
           content: text
         };
         if (isMediation) {
@@ -165,7 +174,7 @@ export default function ChatDrawer({
     } else {
       // LocalStorage mock persistence
       const localKey = isMediation
-        ? `sewarion_chat_order_${order.id}`
+        ? `sewarion_chat_order_${order.id}_${targetUser}`
         : `sewarion_chat_${[currentUserEmail, otherUserEmail].sort().join('_')}`;
       
       const existing = [...messages, { ...newMsg, id: `msg-${Date.now()}` }];
@@ -175,7 +184,7 @@ export default function ChatDrawer({
   };
 
   const getSenderRoleBadge = (senderEmail: string) => {
-    if (senderEmail && senderEmail.toLowerCase().startsWith('admin@')) {
+    if (senderEmail && senderEmail.toLowerCase().startsWith('admin') && senderEmail.toLowerCase().endsWith('@sewarion.com')) {
       return (
         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[8px] font-bold uppercase tracking-wider mb-1">
           <ShieldCheck className="w-2.5 h-2.5" />
@@ -208,7 +217,7 @@ export default function ChatDrawer({
 
   const getSenderDisplayName = (senderEmail: string) => {
     if (senderEmail === currentUserEmail) return 'Anda';
-    if (senderEmail && senderEmail.toLowerCase().startsWith('admin@')) return 'Sewarion Admin';
+    if (senderEmail && senderEmail.toLowerCase().startsWith('admin') && senderEmail.toLowerCase().endsWith('@sewarion.com')) return 'Sewarion Admin';
     return senderEmail.split('@')[0];
   };
 
@@ -248,9 +257,9 @@ export default function ChatDrawer({
           <div className="p-3 bg-[#e8f5e9] dark:bg-[#112413] border-b border-[#bdcaba]/35 dark:border-[#2b3a27]/35 text-xs text-[#2e7d32] dark:text-[#7ffc97] text-left flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-bold text-[11px]">Obrolan Dimediasi oleh Sewarion</p>
+              <p className="font-bold text-[11px]">Saluran Komunikasi Mediasi</p>
               <p className="text-[9px] text-[#4caf50] mt-0.5 leading-relaxed">
-                Penyewa, Pemilik, dan Sewarion Admin (Penengah) berada dalam obrolan ini untuk menjamin keamanan & transparansi transaksi.
+                Obrolan Anda terhubung langsung dengan Penengah Resmi Sewarion. Penyewa dan Pemilik tidak dapat saling berkirim pesan secara langsung demi keamanan transaksi.
               </p>
             </div>
           </div>
@@ -279,7 +288,7 @@ export default function ChatDrawer({
           ) : (
             messages.map((msg, idx) => {
               const isMe = msg.sender_email === currentUserEmail;
-              const isMediator = msg.sender_email && msg.sender_email.toLowerCase().startsWith('admin@');
+              const isMediator = msg.sender_email && msg.sender_email.toLowerCase().startsWith('admin') && msg.sender_email.toLowerCase().endsWith('@sewarion.com');
               
               return (
                 <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in duration-200`}>

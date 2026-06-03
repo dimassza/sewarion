@@ -12,7 +12,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'paid' | 'completed'>('all');
 
   // Check if current user is Sewarion Admin
-  const isAdmin = user.email && user.email.toLowerCase().startsWith('admin@');
+  const isAdmin = user.email && user.email.toLowerCase().startsWith('admin') && user.email.toLowerCase().endsWith('@sewarion.com');
 
   // Simulation state: allows testing overdue late returns
   const [simulateOverdue, setSimulateOverdue] = useState(false);
@@ -20,6 +20,8 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
   // Chat drawer states
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedOrderForChat, setSelectedOrderForChat] = useState<Order | null>(null);
+  const [chatTargetEmail, setChatTargetEmail] = useState('');
+  const [chatTargetName, setChatTargetName] = useState('');
 
   // Late fee payment modal states
   const [selectedOrderForLateFee, setSelectedOrderForLateFee] = useState<Order | null>(null);
@@ -523,6 +525,15 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
 
   const handleOpenChat = (order: Order) => {
     setSelectedOrderForChat(order);
+    setChatTargetEmail('admin@sewarion.com');
+    setChatTargetName('Admin Sewarion (Layanan & Pengiriman)');
+    setChatOpen(true);
+  };
+
+  const handleOpenAdminChat = (order: Order, email: string, role: string) => {
+    setSelectedOrderForChat(order);
+    setChatTargetEmail(email);
+    setChatTargetName(`${role}: ${email.split('@')[0]}`);
     setChatOpen(true);
   };
 
@@ -660,7 +671,6 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
                     </div>
                   </div>
 
-                  {/* Actions Column */}
                   <div className="flex flex-row md:flex-col justify-between md:justify-center items-end border-t md:border-t-0 border-[#eff6ea] dark:border-[#2b3a27]/20 pt-4 md:pt-0 gap-4">
                     <div className="text-left md:text-right">
                       <p className="text-[10px] text-[#6e7b6c] dark:text-[#9bb098] font-semibold uppercase tracking-wider">Nilai Transaksi</p>
@@ -671,11 +681,19 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
 
                     <div className="flex flex-wrap gap-2 items-center">
                       <button
-                        onClick={() => handleOpenChat(order)}
+                        onClick={() => handleOpenAdminChat(order, order.userEmail || '', 'Penyewa')}
                         className="bg-[#006b2c] hover:bg-[#00873a] text-white px-4 py-2 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Masuk Mediasi</span>
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Chat Penyewa</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenAdminChat(order, order.product.ownerId || '', 'Pemilik')}
+                        className="bg-[#006b2c]/10 text-[#006b2c] dark:text-[#7ffc97] hover:bg-[#006b2c] dark:hover:bg-[#00873a] hover:text-white px-4 py-2 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Chat Pemilik</span>
                       </button>
 
                       <button
@@ -704,8 +722,12 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
             onClose={() => {
               setChatOpen(false);
               setSelectedOrderForChat(null);
+              setChatTargetEmail('');
+              setChatTargetName('');
             }}
             currentUserEmail={user.email}
+            otherUserEmail={chatTargetEmail}
+            otherUserName={chatTargetName}
             order={selectedOrderForChat}
           />
         )}
@@ -896,7 +918,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
                           className="bg-[#006b2c]/10 text-[#006b2c] dark:text-[#7ffc97] hover:bg-[#006b2c] dark:hover:bg-[#00873a] hover:text-white px-4 py-2.5 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Chat Mediasi</span>
+                          <span>Chat Sewarion</span>
                         </button>
                       </>
                     )}
@@ -921,7 +943,7 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
                           className="bg-[#006b2c]/10 text-[#006b2c] dark:text-[#7ffc97] hover:bg-[#006b2c] dark:hover:bg-[#00873a] hover:text-white px-4 py-2.5 rounded-full font-sans text-xs font-bold flex items-center gap-1.5 transition-all focus:outline-none cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          <span>Chat Mediasi</span>
+                          <span>Chat Sewarion</span>
                         </button>
                       </>
                     )}
@@ -951,8 +973,12 @@ export default function HistoryView({ appCtx }: HistoryViewProps) {
           onClose={() => {
             setChatOpen(false);
             setSelectedOrderForChat(null);
+            setChatTargetEmail('');
+            setChatTargetName('');
           }}
           currentUserEmail={user.email}
+          otherUserEmail={chatTargetEmail}
+          otherUserName={chatTargetName}
           order={selectedOrderForChat}
         />
       )}

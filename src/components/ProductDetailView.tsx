@@ -265,16 +265,6 @@ export default function ProductDetailView({ appCtx, productId }: ProductDetailVi
                   <span className="px-2.5 py-0.5 rounded-full bg-[#006b2c]/10 dark:bg-[#7ffc97]/10 text-[#006b2c] dark:text-[#7ffc97] text-[10px] font-bold">
                     {ownerProfile ? 'Pemilik Terverifikasi' : 'Mitra Sewarion'}
                   </span>
-                  {ownerProfile?.phone_number && (
-                    <a
-                      href={getWhatsAppLink(ownerProfile.phone_number)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#006b2c] dark:text-[#7ffc97] hover:underline text-[11px] font-bold flex items-center gap-0.5"
-                    >
-                      WA: {ownerProfile.phone_number}
-                    </a>
-                  )}
                 </div>
               </div>
             </div>
@@ -296,7 +286,7 @@ export default function ProductDetailView({ appCtx, productId }: ProductDetailVi
               </div>
 
               {/* Chat Button inside Web app */}
-              {user.isLoggedIn && !(user.email && user.email.toLowerCase().startsWith('admin@')) && (
+              {user.isLoggedIn && !(user.email && user.email.toLowerCase().startsWith('admin') && user.email.toLowerCase().endsWith('@sewarion.com')) && (
                 <button
                   onClick={() => setChatOpen(true)}
                   className="bg-[#006b2c] hover:bg-[#00873a] text-white px-5 py-2.5 rounded-full font-sans text-xs font-bold transition-all active:scale-95 shadow-sm flex items-center gap-1.5"

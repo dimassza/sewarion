@@ -118,12 +118,12 @@ create policy "Users can update their orders" on public.orders
 
 create policy "Admin can view all orders" on public.orders
   for select using (
-    (auth.jwt() ->> 'email') like 'admin@%'
+    (auth.jwt() ->> 'email') like 'admin%@sewarion.com'
   );
 
 create policy "Admin can update all orders" on public.orders
   for update using (
-    (auth.jwt() ->> 'email') like 'admin@%'
+    (auth.jwt() ->> 'email') like 'admin%@sewarion.com'
   );
 
 
@@ -140,25 +140,19 @@ create table if not exists public.messages (
 -- Aktifkan RLS di tabel messages
 alter table public.messages enable row level security;
 
--- Policy select: pengirim, penerima, admin, atau penyewa/pemilik dari order_id terkait bisa membaca pesan
-create policy "Users can view messages sent to/by them or for their orders" on public.messages
+-- Policy select: Hanya pengirim, penerima, atau admin yang bisa membaca pesan (Penyewa/Pemilik tidak bisa saling melihat chat masing-masing)
+create policy "Users can view messages sent to/by them" on public.messages
   for select using (
     sender_email = (select email from public.profiles where id = auth.uid()) or
     receiver_email = (select email from public.profiles where id = auth.uid()) or
-    (auth.jwt() ->> 'email') like 'admin@%' or
-    exists (
-      select 1 from public.orders o
-      join public.products p on o.product_id = p.id
-      where o.id = messages.order_id and (
-        o.renter_email = (select email from public.profiles where id = auth.uid()) or
-        p.owner_id = (select email from public.profiles where id = auth.uid())
-      )
-    )
+    (auth.jwt() ->> 'email') like 'admin%@sewarion.com'
   );
 
-create policy "Authenticated users can send messages" on public.messages
+-- Policy insert: Pengguna harus menjadi pengirim, dan salah satu dari pengirim/penerima harus merupakan admin (mencegah chat langsung P2P antar penyewa-pemilik)
+create policy "Users can send messages through admin mediator only" on public.messages
   for insert with check (
-    sender_email = (select email from public.profiles where id = auth.uid())
+    sender_email = (select email from public.profiles where id = auth.uid()) and
+    (sender_email like 'admin%@sewarion.com' or receiver_email like 'admin%@sewarion.com' or receiver_email = 'mediator')
   );
 
 
