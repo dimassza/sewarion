@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sewarion — Cloud Diagnostics Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #006b2c;
+      --bg: #f7fcf5;
+      --text: #171d16;
+      --border: #bdcaba;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 10px 30px rgba(0, 107, 44, 0.05);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      font-size: 13px;
+      color: #546253;
+      margin-bottom: 24px;
+    }
+    .test-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(189, 202, 186, 0.3);
+    }
+    .test-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 99px;
+      text-transform: uppercase;
+    }
+    .badge.pending { background: #eff6ea; color: #6e7b6c; }
+    .badge.success { background: #d2f3db; color: #006b2c; }
+    .badge.error { background: #ffd9de; color: #a72d51; }
+    
+    .console {
+      background: #171d16;
+      color: #a3d9b2;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 16px;
+      border-radius: 16px;
+      margin-top: 24px;
+      max-height: 250px;
+      overflow-y: auto;
+      text-align: left;
+      white-space: pre-wrap;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 99px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    button:hover { background: #00873a; }
+  </style>
+  <!-- Import Supabase Client JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="card">
+  <h1>Sewarion Diagnostics</h1>
+  <p class="subtitle">Mendiagnosis koneksi database Supabase langsung dari browser Anda.</p>
+
+  <div id="tests">
+    <div class="test-row">
+      <span class="test-name">1. Memuat Kredensial</span>
+      <span id="t1" class="badge pending">Pending</span>
+    </div>
+    <div class="test-row">
+      <span class="test-name">2. Ping Server Supabase</span>
+      <span id="t2" class="badge pending">Pending</span>
+    </div>
+    <div class="test-row">
+      <span class="test-name">3. Tes Login Akun Demo</span>
+      <span id="t3" class="badge pending">Pending</span>
+    </div>
+    <div class="test-row">
+      <span class="test-name">4. Membaca Tabel Profiles</span>
+      <span id="t4" class="badge pending">Pending</span>
+    </div>
+  </div>
+
+  <div class="console" id="log-output">Console logs akan muncul di sini...</div>
+
+  <button onclick="runDiagnostics()">Mulai Tes Diagnostik</button>
+</div>
+
+<script>
+  const logBox = document.getElementById('log-output');
+  function log(msg, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const colorMap = {
+      info: '#a3d9b2',
+      error: '#ffd9de',
+      success: '#7ffc97'
+    };
+    logBox.innerHTML += `<div style="color: ${colorMap[type]}">[${timestamp}] ${msg}</div>`;
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  async function runDiagnostics() {
+    logBox.innerHTML = '';
+    log('Memulai tes diagnostik browser...');
+
+    // 1. Load credentials
+    document.getElementById('t1').className = 'badge pending';
+    document.getElementById('t1').innerText = 'Testing';
+    
+    const supabaseUrl = 'https://tqajupbekomrhkhfdhvl.supabase.co';
+    const supabaseKey = 'sb_publishable_f1vo6J5Er9YM25IDrWrcbQ_5WxCSnV8';
+
+    if (!supabaseUrl || supabaseUrl.includes('your-project-id') || !supabaseKey) {
+      document.getElementById('t1').className = 'badge error';
+      document.getElementById('t1').innerText = 'Gagal';
+      log('ERROR: Kredensial Supabase masih menggunakan placeholder!', 'error');
+      return;
+    }
+
+    document.getElementById('t1').className = 'badge success';
+    document.getElementById('t1').innerText = 'Sukses';
+    log(`Kredensial termuat: URL = ${supabaseUrl}`, 'success');
+
+    // Initialize client
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // 2. Ping connection (Info only - don't halt)
+    document.getElementById('t2').className = 'badge pending';
+    document.getElementById('t2').innerText = 'Testing';
+    log('Mencoba melakukan ping ke rest endpoint...');
+    try {
+      const pingStart = Date.now();
+      const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+        headers: { apikey: supabaseKey }
+      });
+      const duration = Date.now() - pingStart;
+      if (res.ok) {
+        document.getElementById('t2').className = 'badge success';
+        document.getElementById('t2').innerText = 'Sukses';
+        log(`Ping berhasil dalam ${duration}ms!`, 'success');
+      } else {
+        throw new Error(`HTTP Status ${res.status}`);
+      }
+    } catch (err) {
+      // Show warning but don't block
+      document.getElementById('t2').className = 'badge error';
+      document.getElementById('t2').innerText = 'Gagal';
+      log(`Ping Gagal: ${err.message}. (Info: Kunci baru jenis sb_publishable mungkin memblokir ping langsung tanpa SDK, tes dilanjutkan.)`, 'info');
+    }
+
+    // 3. Login test
+    document.getElementById('t3').className = 'badge pending';
+    document.getElementById('t3').innerText = 'Testing';
+    log('Mencoba login SDK dengan pemilik123@gmail.com...');
+    let userSession = null;
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: 'pemilik123@gmail.com',
+        password: 'pemilik123*'
+      });
+
+      if (error) {
+        document.getElementById('t3').className = 'badge error';
+        document.getElementById('t3').innerText = 'Gagal';
+        log(`Login Gagal: ${error.message}`, 'error');
+      } else {
+        userSession = data.session;
+        document.getElementById('t3').className = 'badge success';
+        document.getElementById('t3').innerText = 'Sukses';
+        log(`Login Berhasil! User ID: ${data.user.id}`, 'success');
+      }
+    } catch (err) {
+      document.getElementById('t3').className = 'badge error';
+      document.getElementById('t3').innerText = 'Gagal';
+      log(`Exception saat login: ${err.message}`, 'error');
+    }
+
+    // 4. Fetch profiles table
+    document.getElementById('t4').className = 'badge pending';
+    document.getElementById('t4').innerText = 'Testing';
+    log('Mencoba memuat data profil via SDK...');
+    try {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('full_name, email')
+        .limit(3);
+
+      if (error) {
+        document.getElementById('t4').className = 'badge error';
+        document.getElementById('t4').innerText = 'Gagal';
+        log(`Membaca tabel gagal: ${error.message}`, 'error');
+      } else {
+        document.getElementById('t4').className = 'badge success';
+        document.getElementById('t4').innerText = 'Sukses';
+        log(`Membaca tabel berhasil! Menemukan ${data.length} profil di cloud.`, 'success');
+        data.forEach(p => log(` - ${p.full_name} (${p.email})`, 'info'));
+      }
+    } catch (err) {
+      document.getElementById('t4').className = 'badge error';
+      document.getElementById('t4').innerText = 'Gagal';
+      log(`Exception saat membaca tabel: ${err.message}`, 'error');
+    }
+
+    log('Semua pengujian diagnostik selesai.', 'success');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "SEWARION",
+  "description": "Platform Rental Peer-to-Peer Terpercaya Tanpa Deposit",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
