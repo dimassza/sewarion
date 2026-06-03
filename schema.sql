@@ -116,6 +116,16 @@ create policy "Users can update their orders" on public.orders
     )
   );
 
+create policy "Admin can view all orders" on public.orders
+  for select using (
+    (select email from public.profiles where id = auth.uid()) like 'admin@%'
+  );
+
+create policy "Admin can update all orders" on public.orders
+  for update using (
+    (select email from public.profiles where id = auth.uid()) like 'admin@%'
+  );
+
 
 -- 4. Buat Tabel MESSAGES (menyimpan obrolan chat real-time & mediasi)
 create table if not exists public.messages (
@@ -135,7 +145,7 @@ create policy "Users can view messages sent to/by them or for their orders" on p
   for select using (
     sender_email = (select email from public.profiles where id = auth.uid()) or
     receiver_email = (select email from public.profiles where id = auth.uid()) or
-    (select email from public.profiles where id = auth.uid()) = 'admin@sewarion.com' or
+    (select email from public.profiles where id = auth.uid()) like 'admin@%' or
     exists (
       select 1 from public.orders o
       join public.products p on o.product_id = p.id
