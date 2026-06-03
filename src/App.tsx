@@ -622,11 +622,9 @@ export default function App() {
 
   const logout = useCallback(async () => {
     if (isSupabaseConfigured()) {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
+      supabase.auth.signOut().catch((err) => {
         console.error('Gagal logout dari cloud:', err);
-      }
+      });
     }
     clearSession();
     setUser(DEFAULT_USER);
